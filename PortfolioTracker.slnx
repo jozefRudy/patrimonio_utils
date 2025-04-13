@@ -2,4 +2,5 @@
   <Project Path="Account/Account.fsproj" />
   <Project Path="Library/Library.fsproj" />
   <Project Path="Tracker/Tracker.fsproj" />
+  <Project Path="Tests/Tests.fsproj" />
 </Solution>

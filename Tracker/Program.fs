@@ -9,7 +9,8 @@ open CurrentAccount
 [<EntryPoint>]
 let main argv =
     File.commandlinePath ()
-    |> Result.map loadPortfolioFromFile
+    |> Result.map readFile
+    |> Result.map parsePortfolio
     |> Result.map Print.printAssets
     |> Result.tee (fun _ -> Print.newLine ())
     |> Result.tee Print.printPortfolio

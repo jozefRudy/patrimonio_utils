@@ -1,11 +1,12 @@
 ﻿module Portfolio
 
 open System
+open System.IO
 open System.Globalization
 open System.Web
 open FSharp.Data
 open Microsoft.Extensions.Logging
-
+open System.Text.Json
 
 type Asset = { Symbol: string; Quantity: decimal }
 
@@ -33,28 +34,21 @@ module Quotes =
         | "USD" -> (1.0m, 0m) |> Ok
         | _ ->
             try
-                let encodedSymbol = HttpUtility.UrlEncode(symbol)
+                let encodedSymbol = HttpUtility.UrlEncode symbol
                 let url = $"https://query1.finance.yahoo.com/v8/finance/chart/{encodedSymbol}"
-                let data = Data.Load(url)
+                let data = Data.Load url
                 let d0 = data.Chart.Result[0].Meta.RegularMarketPrice
                 let d1 = data.Chart.Result[0].Meta.PreviousClose
-                (d0, (100.0m * ((d0 / d1) - 1m))) |> Ok
+                (d0, 100.0m * (d0 / d1 - 1m)) |> Ok
             with ex ->
                 ex |> Error
 
 
 module Json =
-    [<Literal>]
-    let sample = "/Users/jozefrudy/Documents/projects/portfolio_tracker/portfolio.json"
+    let readFile path = File.ReadAllText path
 
-    type Data = JsonProvider<sample>
-
-    let loadPortfolioFromFile path =
-        Data.Load(uri = path)
-        |> Array.map (fun item ->
-            { Symbol = item.Symbol
-              Quantity = item.Quantity })
-        |> Array.toList
+    let parsePortfolio (item: string) =
+        JsonSerializer.Deserialize<Asset list> item
 
 
 module File =
@@ -66,7 +60,7 @@ module File =
 
 module Logging =
     let factory = LoggerFactory.Create(fun builder -> builder.AddConsole() |> ignore)
-    let getLogger category = factory.CreateLogger(category)
+    let getLogger category = factory.CreateLogger category
 
 
 module Print =
