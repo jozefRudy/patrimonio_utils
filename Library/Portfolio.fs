@@ -9,6 +9,7 @@ open Microsoft.Extensions.Logging
 open System.Text.Json
 
 type Asset = { Symbol: string; Quantity: decimal }
+type Quote = { Symbol: string }
 
 module Format =
     let formatUsd (price: decimal) =
@@ -22,6 +23,23 @@ module Format =
         culture.NumberFormat.CurrencyDecimalDigits <- 3
         price.ToString("C", culture)
 
+module Json =
+    let readFile path = File.ReadAllText path
+
+    let parsePortfolio (item: string) =
+        JsonSerializer.Deserialize<Asset list> item
+
+
+module File =
+    let commandlinePath () =
+        match Environment.GetCommandLineArgs() |> Array.tryItem 1 with
+        | Some p -> Ok p
+        | None -> Error(exn "Please provide path to json file")
+
+
+module Logging =
+    let factory = LoggerFactory.Create(fun builder -> builder.AddConsole() |> ignore)
+    let getLogger category = factory.CreateLogger category
 
 module Quotes =
     [<Literal>]
@@ -42,26 +60,6 @@ module Quotes =
                 (d0, 100.0m * (d0 / d1 - 1m)) |> Ok
             with ex ->
                 ex |> Error
-
-
-module Json =
-    let readFile path = File.ReadAllText path
-
-    let parsePortfolio (item: string) =
-        JsonSerializer.Deserialize<Asset list> item
-
-
-module File =
-    let commandlinePath () =
-        match Environment.GetCommandLineArgs() |> Array.tryItem 1 with
-        | Some p -> Ok p
-        | None -> Error(exn "Please provide path to json file")
-
-
-module Logging =
-    let factory = LoggerFactory.Create(fun builder -> builder.AddConsole() |> ignore)
-    let getLogger category = factory.CreateLogger category
-
 
 module Print =
     let printAssets (assets: Asset list) =
