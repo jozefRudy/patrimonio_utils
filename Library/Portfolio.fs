@@ -9,6 +9,7 @@ open Microsoft.Extensions.Logging
 open System.Text.Json
 open System
 open FsToolkit.ErrorHandling.Operator.Result
+open FsToolkit.ErrorHandling
 
 type Asset = { Symbol: string; Quantity: decimal }
 
@@ -57,22 +58,23 @@ module Json =
     let parsePortfolio (item: string) =
         JsonSerializer.Deserialize<Asset list> item
 
-
 module File =
     let commandlinePath () =
-        match Environment.GetCommandLineArgs() |> Array.tryItem 1 with
-        | Some p -> Ok p
-        | None -> Error(exn "Please provide path to json file")
+        let commandLineArgs = Environment.GetCommandLineArgs()
+
+        let inputJson =
+            match commandLineArgs |> Array.tryItem 1 with
+            | Some p -> Ok p
+            | None -> Error(exn "Please provide path to json file")
+
+        inputJson
+
 
 module Logging =
     let factory = LoggerFactory.Create(fun builder -> builder.AddConsole() |> ignore)
     let getLogger category = factory.CreateLogger category
 
 module Quotes =
-    open FsToolkit.ErrorHandling
-    open FsToolkit.ErrorHandling
-    open FsToolkit.ErrorHandling
-
     [<Literal>]
     let sample = "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X"
 
