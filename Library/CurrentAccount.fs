@@ -11,7 +11,7 @@ open Portfolio.Format
 let getUrl since until token =
     $"v1/rest/periods/{token}/{since}/{until}/transactions.json"
 
-let formatDate (dt: DateOnly) = dt.ToString("yyyy-MM-dd")
+let formatDate (dt: DateOnly) = dt.ToString "yyyy-MM-dd"
 
 type Info =
     { [<JsonPropertyName("iban")>]
@@ -68,14 +68,14 @@ type FioClient(client: HttpClient) =
     member this.Get(token: string) =
         taskResult {
 
-            let until = DateOnly.FromDateTime(DateTime.UtcNow)
-            let since = until.AddDays(-2)
+            let until = DateOnly.FromDateTime DateTime.UtcNow
+            let since = until.AddDays -2
 
             let url = getUrl (formatDate since) (formatDate until) token
 
             try
-                let! response = client.GetStringAsync(url)
-                let result = JsonSerializer.Deserialize<FioData>(response)
+                let! response = client.GetStringAsync url
+                let result = JsonSerializer.Deserialize<FioData> response
 
                 return
                     result.accountStatement.info,
@@ -119,8 +119,8 @@ type TokenFile = Token array
 let loadJsonFromFile (filePath: string) =
     result {
         try
-            let json = File.ReadAllText(filePath)
-            return JsonSerializer.Deserialize<TokenFile>(json)
+            let json = File.ReadAllText filePath
+            return JsonSerializer.Deserialize<TokenFile> json
         with ex ->
             return! ex |> Error
     }

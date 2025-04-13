@@ -7,9 +7,37 @@ open System.Web
 open FSharp.Data
 open Microsoft.Extensions.Logging
 open System.Text.Json
+open System
+open FsToolkit.ErrorHandling.Operator.Result
 
 type Asset = { Symbol: string; Quantity: decimal }
-type Quote = { Symbol: string }
+
+type QuotedAsset =
+    { Symbol: string
+      Quantity: decimal
+      Price: decimal
+      PriceYesterday: decimal
+      PctChange: decimal
+      AbsChange: decimal
+      Value: decimal }
+
+type Portfolio =
+    { Value: decimal
+      EurValue: decimal
+      Date: DateTimeOffset }
+
+module Portfolio =
+    let fromItems (items: QuotedAsset list) (exchangeRate: decimal) (date: DateTimeOffset) =
+        let value = items |> List.sumBy _.Value
+        let eurValue = value / exchangeRate
+
+        { Value = value
+          EurValue = value / exchangeRate
+          Date = date }
+
+    let toJsonFile file (portfolio: Portfolio) =
+        let content = JsonSerializer.Serialize portfolio
+        File.AppendAllText(file, content + Environment.NewLine)
 
 module Format =
     let formatUsd (price: decimal) =
@@ -36,12 +64,15 @@ module File =
         | Some p -> Ok p
         | None -> Error(exn "Please provide path to json file")
 
-
 module Logging =
     let factory = LoggerFactory.Create(fun builder -> builder.AddConsole() |> ignore)
     let getLogger category = factory.CreateLogger category
 
 module Quotes =
+    open FsToolkit.ErrorHandling
+    open FsToolkit.ErrorHandling
+    open FsToolkit.ErrorHandling
+
     [<Literal>]
     let sample = "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X"
 
@@ -49,7 +80,7 @@ module Quotes =
 
     let getQuote (symbol: string) =
         match symbol with
-        | "USD" -> (1.0m, 0m) |> Ok
+        | "USD" -> (1.0m, 1.0m) |> Ok
         | _ ->
             try
                 let encodedSymbol = HttpUtility.UrlEncode symbol
@@ -57,43 +88,52 @@ module Quotes =
                 let data = Data.Load url
                 let d0 = data.Chart.Result[0].Meta.RegularMarketPrice
                 let d1 = data.Chart.Result[0].Meta.PreviousClose
-                (d0, 100.0m * (d0 / d1 - 1m)) |> Ok
+                (d0, d1) |> Ok
             with ex ->
                 ex |> Error
 
+
+    let getExchangeRate () = getQuote "EURUSD=X"
+
+    let getQuotes (items: Asset list) =
+        result {
+            let! quotes =
+                items
+                |> List.map (fun asset -> getQuote asset.Symbol |> Result.map (fun q -> q, asset))
+                |> List.sequenceResultM
+
+            return
+                quotes
+                |> List.map (fun ((q0, q1), asset) ->
+                    { Symbol = asset.Symbol
+                      Quantity = asset.Quantity
+                      Price = q0
+                      PriceYesterday = q1
+                      PctChange = if q1 = 0m then -1m else q0 / q1 - 1m
+                      AbsChange = q0 - q1
+                      Value = q0 * asset.Quantity })
+        }
+
 module Print =
-    let printAssets (assets: Asset list) =
+    let printAssets (assets: QuotedAsset list) =
         let gray = "\x1b[38;5;240m"
         let reset = "\u001b[0m"
         printfn "%24s  %12s  %12s  %12s  %12s" "Symbol" "$ Price" "% Change" "Quantity" "$ Value"
 
         assets
-        |> List.fold
-            (fun total asset ->
-                match Quotes.getQuote asset.Symbol with
-                | Ok(price, change) ->
-                    let value = price * asset.Quantity
-                    let color = if asset.Quantity = 0m then gray else reset
+        |> List.iter (fun asset ->
+            let color = if asset.Quantity = 0m then gray else reset
 
-                    printfn
-                        "%s%24s  %12s  %12.1f  %12.2f  %12s%s"
-                        color
-                        asset.Symbol
-                        (Format.formatUsd price)
-                        change
-                        asset.Quantity
-                        (Format.formatUsd value)
-                        reset
+            printfn
+                "%s%24s  %12s  %12.1f  %12.2f  %12s%s"
+                color
+                asset.Symbol
+                (Format.formatUsd asset.Price)
+                asset.PctChange
+                asset.Quantity
+                (Format.formatUsd (asset.Price * asset.Quantity))
+                reset)
 
-                    total + value
-                | Error _ ->
-                    printfn "%24s  %12.2f  %12s" asset.Symbol asset.Quantity "ERROR"
-                    total)
-            0m
-
-    let printPortfolio value =
+    let printPortfolio (portfolio: Portfolio) =
         printfn "%24s  %12s" "$ Value" "€ Value"
-
-        match Quotes.getQuote "EURUSD=X" with
-        | Ok(exchangeRate, _) -> printfn "%24s  %12s" (Format.formatUsd value) (Format.formatEur (value / exchangeRate))
-        | Error _ -> printfn "%24s  %12s" "ERROR" "ERROR"
+        printfn "%24s  %12s" (Format.formatUsd portfolio.Value) (Format.formatEur portfolio.EurValue)
