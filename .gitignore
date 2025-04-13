@@ -1,0 +1,7 @@
+bin/
+obj/
+.idea/
+.DS_store
+*.DotSettings.user
+_gen/
+gitversion.txt
