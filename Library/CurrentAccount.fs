@@ -1,5 +1,6 @@
 module Library.CurrentAccount
 
+open Portfolio.Print
 open System
 open System.IO
 open System.Net.Http
@@ -99,7 +100,9 @@ module Print =
         printfn "%24s %12s" account.Iban (printCurrency account.Currency account.Balance)
 
     let printTransactions (transactions: Transaction array) =
-        if Seq.length transactions > 0 then
+        if Seq.length transactions = 0 then
+            printfn "%s%s%s" gray "no transactions" reset
+        else
             printfn "%15s %12s %68s" "Date" "Amount" "Comment"
 
             transactions

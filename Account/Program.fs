@@ -26,7 +26,7 @@ let main argv =
         let! accounts = path |> loadJsonFromFile
 
         for t in accounts do
-            let! info, transactions = client.Get(t.Token)
+            let! info, transactions = client.Get t.Token
             Print.printInfo info
             Print.newLine ()
             Print.printTransactions transactions

@@ -128,9 +128,10 @@ module Quotes =
         }
 
 module Print =
+    let reset = "\u001b[0m"
+    let gray = "\x1b[38;5;240m"
+
     let printAssets (assets: QuotedAsset seq) =
-        let gray = "\x1b[38;5;240m"
-        let reset = "\u001b[0m"
         printfn "%24s  %12s  %12s  %12s  %12s" "Symbol" "$ Price" "% Change" "Quantity" "$ Value"
 
         assets
