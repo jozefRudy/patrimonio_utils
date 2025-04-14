@@ -10,23 +10,26 @@ open System
 [<EntryPoint>]
 let main argv =
     let quotes =
-        result {
+        asyncResult {
             let! items = File.commandlinePath () |> Result.map readFile |> Result.map parsePortfolio
-            let! quotes = Quotes.getQuotes items
+            let! quotes = Quotes.getQuotes (items |> List.toArray)
             let! exchangeRate = Quotes.getExchangeRate ()
 
             let portfolio =
                 Portfolio.Portfolio.fromItems quotes (fst exchangeRate) DateTimeOffset.UtcNow
 
-            return quotes, fst exchangeRate, portfolio
+            return quotes, portfolio
         }
 
     quotes
-    |> Result.tee (fun (a, exchRate, portfolio) ->
-        Print.printAssets a
+    |> AsyncResult.tee (fun (assets, portfolio) ->
+        Print.printAssets assets
         Print.newLine ()
-        Print.printPortfolio portfolio)
-    |> Result.mapError (fun x -> Logging.getLogger("Portfolio").LogError(x, "Failed to process portfolio"))
+        Print.printPortfolio portfolio
+        Print.newLine ())
+
+    |> AsyncResult.mapError (fun x -> Logging.getLogger("Portfolio").LogError(x, "Failed to process portfolio"))
+    |> Async.RunSynchronously
     |> ignore
 
     0

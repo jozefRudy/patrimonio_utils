@@ -10,6 +10,7 @@ open System.Text.Json
 open System
 open FsToolkit.ErrorHandling.Operator.Result
 open FsToolkit.ErrorHandling
+open System.Text.Json.Serialization
 
 type Asset = { Symbol: string; Quantity: decimal }
 
@@ -23,22 +24,25 @@ type QuotedAsset =
       Value: decimal }
 
 type Portfolio =
-    { Value: decimal
-      EurValue: decimal
+    { ValueUsd: decimal
+      ValueEur: decimal
       Date: DateTimeOffset }
 
 module Portfolio =
-    let fromItems (items: QuotedAsset list) (exchangeRate: decimal) (date: DateTimeOffset) =
-        let value = items |> List.sumBy _.Value
+
+    let fromItems (items: QuotedAsset seq) (exchangeRate: decimal) (date: DateTimeOffset) =
+        let value = items |> Seq.sumBy _.Value
         let eurValue = value / exchangeRate
 
-        { Value = value
-          EurValue = value / exchangeRate
+        { ValueUsd = value
+          ValueEur = value / exchangeRate
           Date = date }
 
-    let toJsonFile file (portfolio: Portfolio) =
-        let content = JsonSerializer.Serialize portfolio
-        File.AppendAllText(file, content + Environment.NewLine)
+    let toJson (portfolio: Portfolio) =
+        let options = JsonSerializerOptions()
+        options.WriteIndented <- true
+        options.IndentSize <- 4
+        JsonSerializer.Serialize(portfolio, options)
 
 module Format =
     let formatUsd (price: decimal) =
@@ -75,38 +79,45 @@ module Logging =
     let getLogger category = factory.CreateLogger category
 
 module Quotes =
+    open FsToolkit.ErrorHandling
+    open System.Threading.Tasks
+    open FsToolkit.ErrorHandling
+
     [<Literal>]
     let sample = "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X"
 
     type Data = JsonProvider<sample>
 
     let getQuote (symbol: string) =
-        match symbol with
-        | "USD" -> (1.0m, 1.0m) |> Ok
-        | _ ->
-            try
-                let encodedSymbol = HttpUtility.UrlEncode symbol
-                let url = $"https://query1.finance.yahoo.com/v8/finance/chart/{encodedSymbol}"
-                let data = Data.Load url
-                let d0 = data.Chart.Result[0].Meta.RegularMarketPrice
-                let d1 = data.Chart.Result[0].Meta.PreviousClose
-                (d0, d1) |> Ok
-            with ex ->
-                ex |> Error
+        asyncResult {
+            match symbol with
+            | "USD" -> return 1.0m, 1.0m
+            | _ ->
+                try
+                    let encodedSymbol = HttpUtility.UrlEncode symbol
+                    let url = $"https://query1.finance.yahoo.com/v8/finance/chart/{encodedSymbol}"
+                    let! data = Data.AsyncLoad url
+                    let d0 = data.Chart.Result[0].Meta.RegularMarketPrice
+                    let d1 = data.Chart.Result[0].Meta.PreviousClose
+                    return d0, d1
+                with ex ->
+                    return! ex |> Error
+
+        }
 
 
     let getExchangeRate () = getQuote "EURUSD=X"
 
-    let getQuotes (items: Asset list) =
-        result {
+
+    let getQuotes (items: Asset array) =
+        taskResult {
             let! quotes =
                 items
-                |> List.map (fun asset -> getQuote asset.Symbol |> Result.map (fun q -> q, asset))
-                |> List.sequenceResultM
+                |> Seq.traverseAsyncResultM (fun asset -> getQuote asset.Symbol |> AsyncResult.map (fun q -> q, asset))
 
             return
                 quotes
-                |> List.map (fun ((q0, q1), asset) ->
+                |> Seq.map (fun ((q0, q1), asset) ->
                     { Symbol = asset.Symbol
                       Quantity = asset.Quantity
                       Price = q0
@@ -117,13 +128,13 @@ module Quotes =
         }
 
 module Print =
-    let printAssets (assets: QuotedAsset list) =
+    let printAssets (assets: QuotedAsset seq) =
         let gray = "\x1b[38;5;240m"
         let reset = "\u001b[0m"
         printfn "%24s  %12s  %12s  %12s  %12s" "Symbol" "$ Price" "% Change" "Quantity" "$ Value"
 
         assets
-        |> List.iter (fun asset ->
+        |> Seq.iter (fun asset ->
             let color = if asset.Quantity = 0m then gray else reset
 
             printfn
@@ -138,4 +149,4 @@ module Print =
 
     let printPortfolio (portfolio: Portfolio) =
         printfn "%24s  %12s" "$ Value" "€ Value"
-        printfn "%24s  %12s" (Format.formatUsd portfolio.Value) (Format.formatEur portfolio.EurValue)
+        printfn "%24s  %12s" (Format.formatUsd portfolio.ValueUsd) (Format.formatEur portfolio.ValueEur)
