@@ -34,6 +34,6 @@ type Serialization(logger: ITestOutputHelper) =
               ValueEur = 100.1321M
               ValueUsd = 111.21312M }
 
-        let json = Portfolio.toJsonFile portfolio
+        let json = Portfolio.toJson portfolio
         logger.WriteLine json
         Assert.True true
