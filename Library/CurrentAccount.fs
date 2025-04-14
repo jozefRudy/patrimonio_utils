@@ -99,16 +99,20 @@ module Print =
         printfn "%24s %12s" account.Iban (printCurrency account.Currency account.Balance)
 
     let printTransactions (transactions: Transaction array) =
-        printfn "%15s %12s %68s" "Date" "Amount" "Comment"
+        if Seq.length transactions > 0 then
+            printfn "%15s %12s %68s" "Date" "Amount" "Comment"
 
-        transactions
-        |> Array.sortByDescending _.Id
-        |> Array.iter (fun x ->
-            printfn
-                "%15s %12s %68s"
-                x.Date
-                (printCurrency x.Currency x.Amount)
-                (x.Comment.Substring(0, min 67 x.Comment.Length)))
+            transactions
+            |> Array.sortByDescending _.Id
+            |> Array.iter (fun x ->
+                printfn
+                    "%15s %12s %68s"
+                    x.Date
+                    (printCurrency x.Currency x.Amount)
+                    (x.Comment.Substring(0, min 67 x.Comment.Length)))
+
+            let currency = transactions |> Seq.head |> _.Currency
+            printfn "%15s %12s" "Total" (transactions |> Seq.sumBy _.Amount |> (fun x -> printCurrency currency x))
 
 type Token =
     { [<JsonPropertyName("token")>]
