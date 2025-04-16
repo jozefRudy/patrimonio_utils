@@ -7,7 +7,6 @@ open System.Web
 open FSharp.Data
 open Microsoft.Extensions.Logging
 open System.Text.Json
-open System
 open FsToolkit.ErrorHandling.Operator.Result
 open FsToolkit.ErrorHandling
 open System.Text.Json.Serialization
@@ -79,10 +78,6 @@ module Logging =
     let getLogger category = factory.CreateLogger category
 
 module Quotes =
-    open FsToolkit.ErrorHandling
-    open System.Threading.Tasks
-    open FsToolkit.ErrorHandling
-
     [<Literal>]
     let sample = "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X"
 
@@ -122,7 +117,7 @@ module Quotes =
                       Quantity = asset.Quantity
                       Price = q0
                       PriceYesterday = q1
-                      PctChange = if q1 = 0m then -1m else q0 / q1 - 1m
+                      PctChange = if q1 = 0m then 0m else q0 / q1 - 1m
                       AbsChange = q0 - q1
                       Value = q0 * asset.Quantity })
         }
@@ -143,7 +138,7 @@ module Print =
                 color
                 asset.Symbol
                 (Format.formatUsd asset.Price)
-                asset.PctChange
+                (asset.PctChange * 100m)
                 asset.Quantity
                 (Format.formatUsd (asset.Price * asset.Quantity))
                 reset)
