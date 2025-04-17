@@ -52,7 +52,7 @@ module Format =
     let formatEur (price: decimal) =
         let culture = CultureInfo.GetCultureInfo("en-US").Clone() :?> CultureInfo
         culture.NumberFormat.CurrencySymbol <- "€"
-        culture.NumberFormat.CurrencyDecimalDigits <- 3
+        culture.NumberFormat.CurrencyDecimalDigits <- 2
         price.ToString("C", culture)
 
 module Json =
