@@ -127,18 +127,19 @@ module Print =
     let gray = "\x1b[38;5;240m"
 
     let printAssets (assets: QuotedAsset seq) =
-        printfn "%24s  %12s  %12s  %12s  %12s" "Symbol" "$ Price" "% Change" "Quantity" "$ Value"
+        printfn "%24s  %12s  %12s  %12s %12s %12s" "Symbol" "$ Price" "% Change" "Δ Change" "Quantity" "$ Value"
 
         assets
         |> Seq.iter (fun asset ->
             let color = if asset.Quantity = 0m then gray else reset
 
             printfn
-                "%s%24s  %12s  %12.1f  %12.2f  %12s%s"
+                "%s%24s  %12s  %12.1f %12.3f  %12.2f  %12s%s"
                 color
                 asset.Symbol
                 (Format.formatUsd asset.Price)
                 (asset.PctChange * 100m)
+                asset.AbsChange
                 asset.Quantity
                 (Format.formatUsd (asset.Price * asset.Quantity))
                 reset)
