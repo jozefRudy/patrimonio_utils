@@ -25,12 +25,15 @@ let main argv =
         let! path = File.commandlinePath ()
         let! accounts = path |> loadJsonFromFile
 
-        for t in accounts do
+        for i in 0 .. accounts.Length - 1 do
+            let t = accounts.[i]
             let! info, transactions = client.Get t.Token
             Print.printInfo info
             Print.newLine ()
             Print.printTransactions transactions
             Print.newLine ()
+            if i < accounts.Length - 1 then
+                printfn "%s-------------%s" Portfolio.Print.gray Portfolio.Print.reset
             Print.newLine ()
     }
     |> TaskResult.teeError (fun ex -> logger.LogError(ex, "download failed"))
