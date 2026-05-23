@@ -5,23 +5,17 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-  }: let
-    system = "aarch64-darwin";
-    pkgs = nixpkgs.legacyPackages.${system};
+  outputs = { self, nixpkgs }: let
+    systems = [ "aarch64-darwin" "x86_64-linux" ];
+    eachSystem = nixpkgs.lib.genAttrs systems;
 
-    buildDotnetApp = {
-      pname,
-      projectFile,
-    }:
+    buildDotnetApp = pkgs: { pname, projectFile }:
       pkgs.buildDotnetModule {
         inherit pname projectFile;
         version = "1.0.0";
         src = self;
         nugetDeps = ./deps.json;
-        executables = [pname];
+        executables = [ pname ];
         dotnet-sdk = pkgs.dotnet-sdk_9;
         selfContainedBuild = true;
         dotnetFlags = [
@@ -34,15 +28,17 @@
         ];
       };
   in {
-    packages.${system} = {
-      account = buildDotnetApp {
+    packages = eachSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      account = buildDotnetApp pkgs {
         pname = "Account";
         projectFile = "Account/Account.fsproj";
       };
-      tracker = buildDotnetApp {
+      tracker = buildDotnetApp pkgs {
         pname = "Tracker";
         projectFile = "Tracker/Tracker.fsproj";
       };
-    };
+    });
   };
 }
