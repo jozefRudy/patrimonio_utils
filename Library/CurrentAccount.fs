@@ -103,24 +103,29 @@ module Print =
         printfn "%24s %12s" "Iban" "Balance"
         printfn "%24s %12s" account.Iban (printCurrency account.Currency account.Balance)
 
+    let fit width (s: string) =
+        if s.Length > width then s.Substring(0, width)
+        else s.PadRight(width)
+
     let printTransactions (transactions: Transaction array) =
         if Seq.length transactions = 0 then
             printfn "%s%s%s" gray "no transactions" reset
         else
-            printfn "%12s %12s %58s %10s" "Date" "Amount" "Comment" "Type"
+            let wDate, wAmount, wComment, wType = 15, 12, 53, 12
+            printfn "%s %s %s %s" (fit wDate "Date") (fit wAmount "Amount") (fit wComment "Comment") (fit wType "Type")
 
             transactions
             |> Array.sortByDescending _.Id
             |> Array.iter (fun x ->
                 printfn
-                    "%12s %12s %58s %10s"
-                    x.Date
-                    (printCurrency x.Currency x.Amount)
-                    (x.Comment.Substring(0, min 57 x.Comment.Length))
-                    x.Type)
+                    "%s %s %s %s"
+                    (fit wDate x.Date)
+                    (fit wAmount (printCurrency x.Currency x.Amount))
+                    (fit wComment x.Comment)
+                    (fit wType x.Type))
 
             let currency = transactions |> Seq.head |> _.Currency
-            printfn "%15s %12s" "Total" (transactions |> Seq.sumBy _.Amount |> (fun x -> printCurrency currency x))
+            printfn "%s %s" (fit wDate "Total") (fit wAmount (transactions |> Seq.sumBy _.Amount |> printCurrency currency))
 
 type Token =
     { [<JsonPropertyName("token")>]
