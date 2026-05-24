@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <Compile Include="TestJson.fs" />
+        <Compile Include="TestAccount.fs" />
     </ItemGroup>
 
     <ItemGroup>

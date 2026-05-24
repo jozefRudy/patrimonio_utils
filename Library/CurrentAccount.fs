@@ -28,7 +28,8 @@ type Transaction =
       Amount: decimal
       Currency: string
       UserIdentification: string
-      Comment: string }
+      Comment: string
+      Type: string }
 
 type ColumnValue<'T> = { value: 'T; name: string; id: int }
 
@@ -44,7 +45,9 @@ type JsonTransaction =
       [<JsonPropertyName("column7")>]
       userIdentification: ColumnValue<string>
       [<JsonPropertyName("column25")>]
-      comment: ColumnValue<string> }
+      comment: ColumnValue<string>
+      [<JsonPropertyName("column12")>]
+      typ: ColumnValue<string> }
 
 module JsonTransaction =
     let safeExtractValue<'T> (column: ColumnValue<'T>) defaultVal =
@@ -58,7 +61,8 @@ module JsonTransaction =
           Amount = json.amount.value
           Currency = json.currency.value
           UserIdentification = safeExtractValue json.userIdentification ""
-          Comment = safeExtractValue json.comment "" }
+          Comment = safeExtractValue json.comment ""
+          Type = safeExtractValue json.typ "" }
 
 type FioData =
     { accountStatement:
@@ -103,16 +107,17 @@ module Print =
         if Seq.length transactions = 0 then
             printfn "%s%s%s" gray "no transactions" reset
         else
-            printfn "%15s %12s %68s" "Date" "Amount" "Comment"
+            printfn "%12s %12s %68s %15s" "Date" "Amount" "Comment" "Type"
 
             transactions
             |> Array.sortByDescending _.Id
             |> Array.iter (fun x ->
                 printfn
-                    "%15s %12s %68s"
+                    "%12s %12s %68s %15s"
                     x.Date
                     (printCurrency x.Currency x.Amount)
-                    (x.Comment.Substring(0, min 67 x.Comment.Length)))
+                    (x.Comment.Substring(0, min 67 x.Comment.Length))
+                    x.Type)
 
             let currency = transactions |> Seq.head |> _.Currency
             printfn "%15s %12s" "Total" (transactions |> Seq.sumBy _.Amount |> (fun x -> printCurrency currency x))
