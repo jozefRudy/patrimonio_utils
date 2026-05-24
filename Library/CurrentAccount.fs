@@ -115,18 +115,18 @@ module Print =
         if Seq.length transactions = 0 then
             printfn "%s%s%s" gray "no transactions" reset
         else
-            let wDate, wAmount, wComment, wType = 15, 12, 53, 12
-            printfn "%s %s %s %s" (fit wDate "Date") (fitRight wAmount "Amount") (fit wComment "Comment") (fit wType "Type")
+            let wDate, wAmount, wComment = 15, 12, 68
+            printfn "%s %s %s" (fit wDate "Date") (fitRight wAmount "Amount") (fit wComment "Comment")
 
             transactions
             |> Array.sortByDescending _.Id
             |> Array.iter (fun x ->
+                let comment = if String.IsNullOrWhiteSpace x.Comment then x.Type else x.Comment
                 printfn
-                    "%s %s %s %s"
+                    "%s %s %s"
                     (fit wDate x.Date)
                     (fitRight wAmount (printCurrency x.Currency x.Amount))
-                    (fit wComment x.Comment)
-                    (fit wType x.Type))
+                    (fit wComment comment))
 
             let currency = transactions |> Seq.head |> _.Currency
             printfn "%s %s" (fit wDate "Total") (fitRight wAmount (transactions |> Seq.sumBy _.Amount |> printCurrency currency))
