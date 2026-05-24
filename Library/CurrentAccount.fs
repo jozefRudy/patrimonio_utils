@@ -107,12 +107,16 @@ module Print =
         if s.Length > width then s.Substring(0, width)
         else s.PadRight(width)
 
+    let fitRight width (s: string) =
+        if s.Length > width then s.Substring(0, width)
+        else s.PadLeft(width)
+
     let printTransactions (transactions: Transaction array) =
         if Seq.length transactions = 0 then
             printfn "%s%s%s" gray "no transactions" reset
         else
             let wDate, wAmount, wComment, wType = 15, 12, 53, 12
-            printfn "%s %s %s %s" (fit wDate "Date") (fit wAmount "Amount") (fit wComment "Comment") (fit wType "Type")
+            printfn "%s %s %s %s" (fit wDate "Date") (fitRight wAmount "Amount") (fit wComment "Comment") (fit wType "Type")
 
             transactions
             |> Array.sortByDescending _.Id
@@ -120,12 +124,12 @@ module Print =
                 printfn
                     "%s %s %s %s"
                     (fit wDate x.Date)
-                    (fit wAmount (printCurrency x.Currency x.Amount))
+                    (fitRight wAmount (printCurrency x.Currency x.Amount))
                     (fit wComment x.Comment)
                     (fit wType x.Type))
 
             let currency = transactions |> Seq.head |> _.Currency
-            printfn "%s %s" (fit wDate "Total") (fit wAmount (transactions |> Seq.sumBy _.Amount |> printCurrency currency))
+            printfn "%s %s" (fit wDate "Total") (fitRight wAmount (transactions |> Seq.sumBy _.Amount |> printCurrency currency))
 
 type Token =
     { [<JsonPropertyName("token")>]
