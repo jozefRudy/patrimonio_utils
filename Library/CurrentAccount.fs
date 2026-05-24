@@ -46,7 +46,7 @@ type JsonTransaction =
       userIdentification: ColumnValue<string>
       [<JsonPropertyName("column25")>]
       comment: ColumnValue<string>
-      [<JsonPropertyName("column12")>]
+      [<JsonPropertyName("column8")>]
       typ: ColumnValue<string> }
 
 module JsonTransaction =
@@ -107,16 +107,16 @@ module Print =
         if Seq.length transactions = 0 then
             printfn "%s%s%s" gray "no transactions" reset
         else
-            printfn "%12s %12s %68s %15s" "Date" "Amount" "Comment" "Type"
+            printfn "%12s %12s %58s %10s" "Date" "Amount" "Comment" "Type"
 
             transactions
             |> Array.sortByDescending _.Id
             |> Array.iter (fun x ->
                 printfn
-                    "%12s %12s %68s %15s"
+                    "%12s %12s %58s %10s"
                     x.Date
                     (printCurrency x.Currency x.Amount)
-                    (x.Comment.Substring(0, min 67 x.Comment.Length))
+                    (x.Comment.Substring(0, min 57 x.Comment.Length))
                     x.Type)
 
             let currency = transactions |> Seq.head |> _.Currency
